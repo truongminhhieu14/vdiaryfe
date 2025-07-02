@@ -1,26 +1,62 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@layer base {
+  body {
+    @apply font-roboto;
+  }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  h1,
+  h2,
+  h3, 
+  h4,
+  h5,
+  h6 {
+    @apply font-oswald font-bold uppercase;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  .h1 {
+    @apply text-white text-6xl tracking-[-3px];
+  }
+
+  .h2 {
+    @apply text-[36px];
+  }
+
+  .h3 {
+    @apply text-[32px];
+  }
+
+  .h4 {
+    @apply text-[26px];
+  }
+
+  .h5 {
+    @apply text-[22px];
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.active {
+  @apply text-accent;
+}
+
+/* swiper pagination styles */
+.swiper-horizontal > .swiper-pagination-bullets .swiper-pagination-bullet,
+.swiper-horizontal.swiper-pagination-bullets .swiper-pagination-bullet {
+  @apply bg-accent
+}
+
+/* user table */
+
+.userTable {
+  @apply bg-white
+}
+
+.userTable th{
+  @apply border text-base font-medium
+}
+
+.userTable td{
+  @apply border text-base text-center
 }

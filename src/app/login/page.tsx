@@ -28,16 +28,18 @@ const Login: React.FC = () => {
     try {
       const res = await axiosInstance.post("/auth/login", data);
       const dataApi = res.data;
-
+      console.log("login",dataApi);
       if (dataApi.success) {
         toast.success(dataApi.message);
-        router.push("/"); 
+        if (dataApi.user) {
+          localStorage.setItem("user", JSON.stringify(dataApi.user));
+        }
+        router.push("/");
       } else {
         toast.error(dataApi.message || "Đăng nhập thất bại");
       }
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message || "Đăng nhập thất bại (server)";
+      const message = error?.response?.data?.message || "Đăng nhập thất bại (server)";
       toast.error(message);
     }
   };

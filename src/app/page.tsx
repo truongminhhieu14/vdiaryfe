@@ -1,40 +1,106 @@
+"use client";
+
 import FriendsList from "@/components/FriendList";
 import Image from "next/image";
+import { FaUserFriends, FaUserPlus, FaUserCheck, FaUser } from "react-icons/fa";
+
+import { useState } from "react";
+import SuggestionsList from "@/components/SuggestionList";
+
+const friendCount = 1056; // mock data
 
 export default function Home() {
+  const [tab, setTab] = useState<'all' | 'suggestions' | 'requests' | 'following'>('all');
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-white p-4 border-r hidden lg:block">
-        <h2 className="text-lg font-bold mb-4">Friends</h2>
-        <ul className="space-y-2 text-sm">
-          <li className="font-semibold text-blue-600">All</li>
-          <li className="text-gray-600">Suggestions</li>
-          <li className="text-gray-600">Friend requests</li>
-          <li className="text-gray-600">Following</li>
-        </ul>
-        <div className="mt-6 text-sm text-gray-500">
-          <p><strong>New friends</strong></p>
-          <p>Châu Đức and Hương Hồng accepted your request.</p>
+      <aside className="w-72 bg-white rounded-xl shadow border border-gray-200 flex flex-col pt-6 pb-4 px-4 min-h-[calc(100vh-32px)] mx-2 my-4">
+        <h2 className="text-2xl font-bold mb-6 pl-2 tracking-wide">Friends</h2>
+        <nav className="flex-1">
+          <ul className="space-y-1">
+            <li>
+              <button className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg font-semibold ${tab === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => setTab('all')}>
+                <FaUserFriends className="text-lg" />
+                All
+              </button>
+            </li>
+            <li>
+              <button className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg font-semibold ${tab === 'suggestions' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => setTab('suggestions')}>
+                <FaUserPlus className="text-lg" />
+                Suggestions
+              </button>
+            </li>
+            <li>
+              <button className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg font-semibold ${tab === 'requests' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => setTab('requests')}>
+                <FaUserCheck className="text-lg" />
+                Friend requests
+              </button>
+            </li>
+            <li>
+              <button className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg font-semibold ${tab === 'following' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => setTab('following')}>
+                <FaUser className="text-lg" />
+                Following
+              </button>
+            </li>
+          </ul>
+        </nav>
+        <div className="border-t border-gray-200 mt-6 pt-4">
+          <h4 className="text-sm font-semibold text-gray-500 mb-3 pl-2">New friends</h4>
+          <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
+            <Image
+              src="/assets/img/banner.png"
+              alt="avatar"
+              width={36}
+              height={36}
+              className="rounded-full object-cover border"
+            />
+            <div className="text-xs text-gray-700">
+              <span className="font-semibold">Châu Đức and Hương Hồng</span> have accepted your friend request.
+              <div className="text-gray-400 text-[11px]">4 hours ago</div>
+            </div>
+          </div>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="w-full h-44 bg-gradient-to-r from-purple-600 to-pink-500 flex items-center justify-center text-white text-4xl font-bold">
-          CARNIVAL PARTY
-        </div>
-
-        {/* Search */}
-        <div className="p-4">
-          <input
-            type="text"
-            placeholder="Enter friend's name..."
-            className="w-full border px-4 py-2 rounded"
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Banner */}
+        <div className="w-full h-48 relative">
+          <Image
+            src="/assets/img/banner.png"
+            alt="Banner"
+            fill
+            className="object-cover"
+            priority
           />
         </div>
 
-        <FriendsList />
+        {/* Search and header */}
+        <div className="bg-white border-b border-gray-200 px-8 pt-4 pb-2 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-end gap-2">
+              <h3 className="text-xl font-bold text-gray-800">Friends</h3>
+              <span className="text-blue-600 font-semibold text-base">{friendCount.toLocaleString()} friends</span>
+            </div>
+            <div className="relative w-80">
+              <input
+                type="text"
+                placeholder="Enter friends' names, VDB ID..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 placeholder-gray-400"
+              />
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Friends List hoặc Suggestions List */}
+        <div className="flex-1 overflow-y-auto px-8 py-6 bg-gray-50">
+          {tab === 'all' && <FriendsList />}
+          {tab === 'suggestions' && <SuggestionsList />}
+          {/* Có thể thêm các tab khác ở đây */}
+        </div>
       </main>
     </div>
   );

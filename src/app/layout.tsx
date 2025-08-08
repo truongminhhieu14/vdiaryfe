@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
 import { Oswald, Roboto } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import { ToastContainer } from "react-toastify";
+import ClientLayout from "./ClientLayout";
+
+
 
 const oswald = Oswald({
   variable: "--font-oswald",
   subsets: ["latin"],
   weight: ["200", "300", "400", "500", "600", "700"],
 });
-
 
 const roboto = Roboto({
   variable: "--font-roboto",
@@ -28,15 +27,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+  
   return (
     <html lang="en">
-      <body
-        className={`${oswald.variable} ${roboto.variable} w-full max-w[1920px] mx-auto bg-white antialiased`}
-      >
-        <ToastContainer />
-        <Header />
-        {children}
-        <Footer />
+      <body className={`${oswald.variable} ${roboto.variable} w-full max-w[1920px] mx-auto bg-white antialiased`}>
+        <ClientLayout>
+          {children}
+        </ClientLayout>
       </body>
     </html>
   );

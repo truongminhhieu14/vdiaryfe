@@ -1,11 +1,14 @@
 "use client";
 
-
-import axiosInstance from "@/lib/axiosinstance";
+import { AppContext } from "@/context/app.context";
+import authApi from "@/services/auth.service";
+import { setUser as setReduxUser } from "@/store/authSlice";
+import { setAccessTokenToLocalStorage, setRefreshTokenToLocalStorage, setUserIdToLocalStorage } from "@/utils/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { ChangeEvent, FormEvent, useState } from "react";
+import React, { ChangeEvent, FormEvent, useContext, useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 
 interface LoginData {
@@ -16,7 +19,9 @@ interface LoginData {
 const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [data, setData] = useState<LoginData>({ email: "", password: "" });
+  const { setIsAuthenticated, setUser } = useContext(AppContext)
   const router = useRouter();
+  const dispatch = useDispatch();
 
   const handleOnChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -26,20 +31,25 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const res = await axiosInstance.post("/auth/login", data);
+      const res = await authApi.signIn(data);
       const dataApi = res.data;
-      console.log("login",dataApi);
-      if (dataApi.success) {
-        toast.success(dataApi.message);
-        if (dataApi.user) {
-          localStorage.setItem("user", JSON.stringify(dataApi.user));
-        }
+      const userData = dataApi.metadata.user;
+      if (dataApi?.success && dataApi?.metadata) {
+        toast.success(dataApi.message);    
+        setAccessTokenToLocalStorage(dataApi.metadata.accessToken);
+        setRefreshTokenToLocalStorage(dataApi.metadata.refreshToken);
+        setUserIdToLocalStorage(dataApi.metadata.user.id);
+        localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem("isAuthenticated", "true");
+        dispatch(setReduxUser(userData));
+        setIsAuthenticated(true)
+        setUser(userData)
         router.push("/");
       } else {
-        toast.error(dataApi.message || "Đăng nhập thất bại");
+        toast.error(dataApi.message || "Login failed");
       }
     } catch (error: any) {
-      const message = error?.response?.data?.message || "Đăng nhập thất bại (server)";
+      const message = error?.response?.data?.message || "Login failed (server)";
       toast.error(message);
     }
   };

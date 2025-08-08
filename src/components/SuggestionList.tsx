@@ -1,107 +1,160 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import axiosInstance from "@/lib/axiosinstance";
-import { FaUserPlus } from "react-icons/fa";
-
-interface Suggestion {
-  _id: string;
-  name: string;
-  avatar: string;
-  background: string;
-  verified: boolean;
-  isFriend: boolean;
-}
+import { FaUserPlus, FaCheckCircle, FaEllipsisH } from "react-icons/fa";
+import FriendActionMenu from "./FriendActionMenu";
+import friendApi from "@/services/friend.service";
+import { IFriend } from "@/types/friend.type";
+import { useMutualFriendsBatch } from "@/hook/useMutualFriendsBatch";
+import { getUserIdFromLocalStorage } from "@/utils/auth";
 
 export default function SuggestionsList() {
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [sending, setSending] = useState<string | null>(null);
-  const [sentIds, setSentIds] = useState<string[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
+  const [suggestions, setSuggestions] = useState<IFriend[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const suggestionIds = suggestions.map((s) => s._id);
+  const { mutualMap, loading: loadingMutual } = useMutualFriendsBatch(suggestionIds);
+  const [userId, setUserId] = useState<string | null>(null);
+  
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      if (user && (user._id || user.id)) setCurrentUserId(user._id || user.id);
-    }
+    setUserId(getUserIdFromLocalStorage());
   }, []);
+  const fetchSuggestions = async (pageNum: number) => {
+    try {
+      setLoading(true);
+      const res = await friendApi.getSuggestions(pageNum, 10);
+      const newSuggestions = res.data.data || [];
+      const hasMore = res.data.pagination?.hasMore || false;
+
+      if (pageNum === 1) {
+          setSuggestions(newSuggestions);
+        } else {
+          setSuggestions(prev => [...prev, ...newSuggestions]);
+        }
+        setHasMore(hasMore);
+      } catch (err: any) {
+        setError(err.response?.data?.message || "Lỗi khi tải danh sách bạn bè");
+      }finally {
+        setTimeout(() => {
+          setLoading(false)
+        }, 1000)
+      }
+    };
+
+    useEffect(() => {
+      if(userId) fetchSuggestions(page);
+      console.log("page", page);
+      
+    },[userId, page]);
+
+    const loadMore = () => {
+    if (!loading && hasMore) {
+      setPage(prev => prev + 1);
+    }
+  };
 
   useEffect(() => {
-    if (!currentUserId) return;
-    axiosInstance.get(`/friends/suggestions/${currentUserId}`)
-      .then(res => {
-        console.log('Suggestions:', res.data.suggestions);
-        setSuggestions(res.data.suggestions || [])});
-  }, [currentUserId]);
+    if (!loadMoreRef.current || !hasMore || loading) return;
 
-  const handleAddFriend = async (recipientId: string) => {
-    if (!currentUserId) return;
-    setSending(recipientId);
-    try {
-      await axiosInstance.post("/friends/add", { requesterId: currentUserId, recipientId });
-      setSentIds(prev => [...prev, recipientId]);
-    } catch {
-      alert("Gửi lời mời thất bại!");
-    }
-    setSending(null);
-  };
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setPage((prev) => prev + 1);
+      }
+    }, { threshold: 1 });
 
-  const handleUnfriend = async (friendId: string) => {
-    if (!currentUserId) return;
+    observer.observe(loadMoreRef.current);
+
+    return () => {
+      if (loadMoreRef.current) observer.unobserve(loadMoreRef.current);
+    };
+  }, [hasMore, loading]);
+
+  const handleAddFriend = async (friendId: string) => {
     try {
-      await axiosInstance.post("/friends/unfriend", { userId: currentUserId, friendId });
-      setSuggestions(prev => prev.filter(f => f._id !== friendId));
-    } catch {
-      alert("Huỷ kết bạn thất bại!");
+      await friendApi.addFriend(friendId);
+      setSuggestions(suggestions.filter((s) => s._id !== friendId));
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Lỗi khi thêm bạn");
     }
   };
 
-  if (!currentUserId) return null;
+  // if (loading) {
+  //   return <div className="text-center py-12">Đang tải gợi ý...</div>;
+  // }
+
+  // if (error) {
+  //   return <div className="text-center text-red-500 py-12">{error}</div>;
+  // }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <>
+     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
       {suggestions.length === 0 && (
         <div className="col-span-full text-center text-gray-500 py-12">
           Không có gợi ý kết bạn nào.
         </div>
       )}
-      {suggestions.map(sug => (
-        <div key={sug._id} className="relative bg-white rounded-xl border border-gray-200 shadow flex flex-col items-center p-4">
-          <div className="w-full h-24 relative mb-4">
+      {suggestions.map((sug) => (
+        <div
+          key={sug._id}
+          className="relative bg-white rounded-2xl border border-gray-200 shadow flex flex-col items-center p-6 group transition hover:shadow-lg"
+        >
+          <FriendActionMenu
+            friend={sug}
+            type="suggestion"
+            onAddFriend={handleAddFriend}
+          />
+          <div className="w-full h-24 relative mb-4 rounded-t-2xl overflow-hidden">
             <Image
-              src={sug.background || "/assets/img/banner.png"}
+              src={sug.background || "/assets/img/bg1.jpg"}
               alt="background"
               fill
-              className="object-cover rounded-t-xl"
+              className="object-cover"
             />
           </div>
-          <Image
-            src={sug.avatar || "/assets/img/banner.png"}
-            alt={sug.name}
-            width={64}
-            height={64}
-            className="rounded-full border-4 border-white shadow-md object-cover bg-white -mt-12 mb-2"
-          />
-          <div className="font-semibold text-gray-900">{sug.name}</div>
-          {sug.isFriend ? (
-            <button
-              className="mt-3 flex items-center gap-2 px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
-              onClick={() => handleUnfriend(sug._id)}
-            >
-              Huỷ kết bạn
-            </button>
-          ) : (
-            <button
-              className="mt-3 flex items-center gap-2 px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500 transition"
-              onClick={() => handleAddFriend(sug._id)}
-              disabled={sending === sug._id || sentIds.includes(sug._id)}
-            >
-              <FaUserPlus />
-              {sentIds.includes(sug._id) ? "Đã gửi lời mời" : sending === sug._id ? "Đang gửi..." : "Kết bạn"}
-            </button>
-          )}
+          <div className="relative -mt-12 mb-2">
+            <Image
+              src={sug.avatar || "/assets/img/trainers/hieu.jpg"}
+              alt={sug.name}
+              width={64}
+              height={64}
+              className="rounded-full border-4 border-white shadow-md object-cover bg-white"
+            />
+          </div>
+          <div className="font-semibold text-gray-900 flex items-center gap-1">
+            {sug.name}
+            {sug.verified && (
+              <FaCheckCircle
+                className="text-blue-500 text-sm ml-1"
+                title="Verified"
+              />
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 mt-1 mb-2">
+            {(mutualMap[sug._id]?.mutualFriends || [])
+              .slice(0, 2)
+              .map((mf, idx) => (
+                <Image
+                  key={idx}
+                  src={mf.avatar || "/assets/img/trainers/hieu.jpg"}
+                  alt={mf.name}
+                  width={20}
+                  height={20}
+                  className="rounded-full border-2 border-white -ml-2 first:ml-0 bg-white"
+                />
+              ))}
+            <span className="text-xs text-gray-500 ml-2">
+              {mutualMap[sug._id]?.count} mutual friends
+            </span>
+          </div>
         </div>
       ))}
     </div>
+    {hasMore && <div ref={loadMoreRef} className="h-10" />}
+    </>
   );
 }

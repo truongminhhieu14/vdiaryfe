@@ -1,11 +1,16 @@
-import { title } from "process";
-
 export const headerData=[
-    { title: 'Trang chủ', href: "/" },
-    { title: 'Cửa hàng của tôi', href: "/my-shop" },
-    { title: 'Trang cộng đồng', href: "/" },
-    { title: 'Triển lãm kỷ yếu số', href: "/" },
-    { title: 'Trang cá nhân', href: "/" },
-    { title: 'Kết nối', href: "/" },
-    { title: 'Chức năng', href: "/" }
+  { title: "Tra cứu điểm thi TNTHPT2025", href: "/tra-cuu-diem-thi-tnthpt2025", icon: "📋" },
+  { title: "Trang chủ", href: "/trang-chu", icon: "🏠" },
+  { title: "Design", href: "/design", icon: "🎨" },
+  { title: "My shop", href: "/my-shop", icon: "🛒" },
+  { title: "News", href: "/news", icon: "📰" },
+  { title: "Triển lãm kỷ yếu số", href: "/trien-lam-ky-yeu-so", icon: "🖼️" },
+  { title: "Profile", href: "/profile", icon: "👤" },
+  { title: "Kết nối", href: "/ket-noi", icon: "🔗" },
+  { title: "Function", href: "/function", icon: "⚙️" },
+  { title: "Kỷ niệm năm xưa", href: "/ky-niem-nam-xua", icon: "📅" },
+  { title: "Feeling & Moments", href: "/feeling-and-moments", icon: "😊" },
+  { title: "Sắp ra mắt", href: "/sap-ra-mat", icon: "🚀" },
+  { title: "Tiện ích cuộc sống", href: "/tien-ich-cuoc-song", icon: "💡" },
+  { title: "Brain Funny", href: "/brain-funny", icon: "🧠" },
 ]

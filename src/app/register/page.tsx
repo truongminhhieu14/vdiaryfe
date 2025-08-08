@@ -5,20 +5,13 @@ import Link from "next/link";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import axiosInstance from "@/lib/axiosinstance";
-
-
-interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
+import { IRegister } from "@/types/auth.type";
+import authApi from "@/services/auth.service";
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [data, setData] = useState<RegisterData>({
+  const [data, setData] = useState<IRegister>({
     name: "",
     email: "",
     password: "",
@@ -41,7 +34,7 @@ const Register = () => {
     }
 
     try {
-      const res = await axiosInstance.post("/auth/register", data);
+      const res = await authApi.signUp(data);
       if (res.data.success) {
         toast.success(res.data.message || "Đăng ký thành công!");
         router.push("/login");
@@ -59,7 +52,7 @@ const Register = () => {
       <div className="mx-auto container p-4">
         <div className="bg-white p-5 w-full max-w-sm mx-auto">
           <div className="w-20 h-20 mx-auto relative overflow-hidden rounded-full">
-            <img src="/assets/assets/img/signin.gif" alt="login icon" />
+            <img src="/assets/img/signin.gif" alt="login icon" />
           </div>
 
           <form className="pt-6 flex flex-col gap-2" onSubmit={handleSubmit}>

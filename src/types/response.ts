@@ -1,3 +1,11 @@
+export interface FieldError {
+  type: string;
+  value: any;
+  msg: string;
+  path: string;
+  location: string
+};
+
 export type SuccessResponse<T> = {
   message: string;
   metadata: T;
@@ -8,7 +16,8 @@ export type SuccessResponse<T> = {
 export type ErrorResponse = {
   message: string;
   statusCode: number;
-  status: string
+  status: string;
+  errors?: Record<string, FieldError>;
 };
 
 export type authResponse = SuccessResponse<{

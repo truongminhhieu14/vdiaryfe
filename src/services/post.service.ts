@@ -5,6 +5,7 @@ import {
   LinkMeta,
   LinkMetaResponse,
 } from "@/types/post.type";
+import { SuccessResponse } from "@/types/response";
 import {
   getAccessTokenFormLocalStorage,
   getUserIdFromLocalStorage,
@@ -62,6 +63,24 @@ const postApi = {
       }
     );
   },
+
+  updatePost: async (postId: string, data: Partial<CreatePostPayload>): Promise<AxiosResponse<{updatePost: IPost}>> => {
+    return await http.put(`/posts/${postId}`, data , {
+      headers: {
+        Authorization: `Bearer ${getAccessTokenFormLocalStorage()}`,
+        "x-client-id": getUserIdFromLocalStorage(),
+      },
+    })
+  },
+
+  deletePost: async (postId: string): Promise<AxiosResponse<SuccessResponse<null>>> => {
+    return await http.delete(`/posts/${postId}`, {
+      headers: {
+        Authorization: `Bearer ${getAccessTokenFormLocalStorage()}`,
+        "x-client-id": getUserIdFromLocalStorage(),
+      }
+    })
+  }
 };
 
 export default postApi;

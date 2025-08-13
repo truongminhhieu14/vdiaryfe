@@ -22,6 +22,8 @@ const Header = () => {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
+
+
   const handleLogout = async () => {
     try {
       await authApi.logOut();
@@ -67,7 +69,7 @@ const Header = () => {
         <div className="flex-1 flex items-center justify-center gap-3">
           <div className="relative">
             <img 
-              src={user.avatar || "/assets/img/trainers/hieu.jpg"} 
+              src={user.avatar || "/assets/img/user.png"} 
               alt="avatar" 
               className="w-10 h-10 rounded-full object-cover border-2 border-blue-500"             
             />
@@ -92,7 +94,7 @@ const Header = () => {
               className="bg-transparent outline-none flex-1 text-sm"
               placeholder="Nhập tên bạn bè, nhóm, trang, VDB ID,..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => setSearch(e.target.value)} 
             />
           </div>
         </div>
@@ -127,7 +129,7 @@ const Header = () => {
                 title="Tài khoản"
               >
                 <img 
-                  src={user.avatar} 
+                  src={user.avatar || "/assets/img/user.png"} 
                   alt="user" 
                   className="w-8 h-8 rounded-full border-2 border-white object-cover"
                 />
@@ -143,7 +145,7 @@ const Header = () => {
                   onClick={() => router.push("/profile")}
                   >
                     <div className="relative">
-                      <img src={user.avatar} alt="avatar" className="w-12 h-12 rounded-full border-2 border-blue-500 object-cover" />
+                      <img src={user.avatar || "assets/img/user.png"} alt="avatar" className="w-12 h-12 rounded-full border-2 border-blue-500 object-cover" />
                       <img src={`/assets/img/${user.country || "vn"}.png`} alt="flag" className="absolute -top-1 -left-1 w-5 h-5 rounded-full border border-white" />
                     </div>
                     <div>

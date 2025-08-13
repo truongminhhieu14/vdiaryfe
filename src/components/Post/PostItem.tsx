@@ -8,22 +8,64 @@ import { AiFillHeart } from "react-icons/ai";
 import likeApi from "@/services/like.service";
 import DetailPost from "../DetailPost/DetailPost";
 import { LikeUser } from "@/types/like.type";
-import { FaGlobeAsia, FaLock, FaUserFriends } from "react-icons/fa";
+import {
+  FaAngry,
+  FaGlobeAsia,
+  FaHeart,
+  FaLaughSquint,
+  FaLock,
+  FaSadTear,
+  FaSurprise,
+  FaThumbsUp,
+  FaThumbtack,
+  FaUserFriends,
+} from "react-icons/fa";
 import LikeListModal from "../LikeOfPost/LikeIsPost";
+import { BsThreeDots } from "react-icons/bs";
+import { MdEdit, MdOutlineDelete } from "react-icons/md";
+import UpdatePostModal from "./UpdatePostModal";
+import { useDeletePost } from "@/hook/usePost";
+import { toast } from "react-toastify";
 
-const PostItem = ({ post }: { post: any }) => {
+
+
+const reactions = [
+  { type: 'like', label: 'Thích', icon: <FaThumbsUp className="text-blue-500" />, color: 'text-blue-500' },
+  { type: 'love', label: 'Yêu thích', icon: <FaHeart className="text-red-500" />, color: 'text-red-500' },
+  { type: 'haha', label: 'Haha', icon: <FaLaughSquint className="text-yellow-500" />, color: 'text-yellow-500' },
+  { type: 'wow', label: 'Wow', icon: <FaSurprise className="text-yellow-400" />, color: 'text-yellow-400' },
+  { type: 'sad', label: 'Buồn', icon: <FaSadTear className="text-blue-400" />, color: 'text-blue-400' },
+  { type: 'angry', label: 'Tức giận', icon: <FaAngry className="text-red-600" />, color: 'text-red-600' },
+]
+
+
+
+const PostItem = ({ post, onDeleted }: { post: any, onDeleted?: (id: string) => void }) => {
   const formattedTime = moment(post.createdAt).fromNow();
   const { likeCount, loading } = useLikeCount(post._id);
 
   const [showLikeModal, setShowLikeModal] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [likeUsers, setLikeUsers] = useState<LikeUser[]>([]);
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [localLikeCount, setLocalLikeCount] = useState(likeCount);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { count: commentsCount, loading: loadingCommentCount } =
     useCommentCount(post._id);
-
+  const { deletePost, loading: deleting } = useDeletePost();
+  const handleDelete = async () => {
+  if (!confirm("Bạn có chắc chắn muốn xóa bài viết này?")) return;
+  try {
+    await deletePost(post._id);
+    toast.success("Xóa bài viết thành công");
+    onDeleted?.(post._id);
+  } catch (error) {
+    toast.error("Xóa bài viết thất bại");
+  }
+  setMenuOpen(false);
+};
   useEffect(() => {
     const fetchLikeState = async () => {
       try {
@@ -63,6 +105,7 @@ const PostItem = ({ post }: { post: any }) => {
             alt={post.author.name}
             className="w-12 h-12 rounded-full object-cover mr-3 border border-gray-200"
           />
+
           <div>
             <p className="font-semibold text-gray-900 text-lg">
               {post.author.name}
@@ -91,9 +134,33 @@ const PostItem = ({ post }: { post: any }) => {
             </div>
           </div>
         </div>
-        <button className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100">
-          <i className="fas fa-ellipsis-h"></i>
-        </button>
+        <div className="relative ml-auto ">
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="p-1 hover:bg-gray-200 rounded-full"
+          >
+            <BsThreeDots size={18} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 mt-1 w-56 bg-white border rounded-xl shadow-lg z-10">
+              <button className="flex items-center w-full px-4 py-2 hover:bg-gray-100">
+                <FaThumbtack className="mr-3 text-gray-700" />
+                <span className="text-sm font-medium">Ghim bài viết</span>
+              </button>
+              <button className="flex items-center w-full px-4 py-2 hover:bg-gray-100">
+                <MdEdit className="mr-3 text-gray-700" />
+                <span className="text-sm font-medium" onClick={() => {
+                  setShowEditModal(true);
+                  setMenuOpen(false)
+                }}>Chỉnh sửa bài viết</span>
+              </button>
+              <button onClick={handleDelete} disabled={deleting} className="flex items-center w-full px-4 py-2 hover:bg-gray-100">
+                <MdOutlineDelete className="mr-3 text-gray-700" />
+                <span className="text-sm font-medium">Xóa bài viết</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Nội dung bài viết */}
@@ -179,6 +246,10 @@ const PostItem = ({ post }: { post: any }) => {
             <video
               src={post.videos[0]}
               controls
+              autoPlay
+              muted
+              playsInline
+              loop
               className="w-full max-h-[500px] rounded-lg"
             />
           )}
@@ -190,6 +261,9 @@ const PostItem = ({ post }: { post: any }) => {
                   key={index}
                   src={video}
                   controls
+                  autoPlay
+                  muted
+                  playsInline
                   className="w-full max-h-[400px] rounded-lg"
                 />
               ))}
@@ -301,7 +375,11 @@ const PostItem = ({ post }: { post: any }) => {
       </div>
 
       {showLikeModal && (
-        <LikeListModal isOpen postId={post._id} onClose={() => setShowLikeModal(false)} />
+        <LikeListModal
+          isOpen
+          postId={post._id}
+          onClose={() => setShowLikeModal(false)}
+        />
       )}
       {showDetail && (
         <DetailPost
@@ -309,6 +387,9 @@ const PostItem = ({ post }: { post: any }) => {
           postId={post._id}
           onClose={() => setShowDetail(false)}
         />
+      )}
+      {showEditModal && (
+        <UpdatePostModal open post={post} onClose={() => setShowEditModal(false)} />
       )}
     </div>
   );

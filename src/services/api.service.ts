@@ -1,7 +1,7 @@
 import HttpStatusCode from "@/constant/statusCode";
 import { authResponse } from "@/types/response";
 import { getNewAccessToken } from "@/utils/api";
-import { clearLocalStorage, getAccessTokenFormLocalStorage, setAccessTokenToLocalStorage, setRefreshTokenToLocalStorage, setUserIdToLocalStorage } from "@/utils/auth";
+import { clearLocalStorage, getAccessTokenFormLocalStorage, getUserIdFromLocalStorage, setAccessTokenToLocalStorage, setRefreshTokenToLocalStorage, setUserIdToLocalStorage } from "@/utils/auth";
 import axios, {AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
 
 
@@ -20,9 +20,18 @@ class ApiService {
   constructor() {
     this.accessToken = getAccessTokenFormLocalStorage();
     this.axiosInstance.interceptors.request.use(
-      (config) => {
-        return config;
-      },
+    (config) => {
+      const accessToken = getAccessTokenFormLocalStorage();
+      const userId = getUserIdFromLocalStorage();
+
+      if (accessToken) {
+        config.headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+      if (userId) {
+        config.headers['x-client-id'] = userId;
+      }
+      return config;
+    },
       (error) => {
         return Promise.reject(error);
       }
@@ -30,14 +39,14 @@ class ApiService {
     this.axiosInstance.interceptors.response.use(
       (response) => {
         const { url } = response.config
-        if (url === '/auths/signIn') {
+        if (url === '/auth/login') {
           const data = response.data as authResponse
           this.accessToken = data.metadata?.accessToken
           setAccessTokenToLocalStorage(this.accessToken)
           setRefreshTokenToLocalStorage(data.metadata?.refreshToken)
           setUserIdToLocalStorage(data.metadata.user._id)
         } 
-        else if (url === '/auths/logOut' && response.status === HttpStatusCode.Ok) {
+        else if (url === '/auth/logout' && response.status === HttpStatusCode.Ok) {
           this.accessToken = ''
           clearLocalStorage()
         }

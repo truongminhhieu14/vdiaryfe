@@ -94,17 +94,14 @@ export default function ProfilePage() {
 
   return (
     <div className="relative h-screen bg-gray-100">
-      {/* Sidebar trái */}
       <div className="hidden lg:block fixed top-[64px] left-0 h-full bg-white border-r z-20">
         <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       </div>
 
-      {/* Sidebar phải */}
       <div className="hidden lg:block fixed top-0 right-0 h-full bg-white border-l z-20">
         <RightSideBar />
       </div>
 
-      {/* Nội dung chính */}
       <main className="lg:ml-[240px] lg:mr-[260px] h-full overflow-y-auto px-4 py-2">
         <div className="max-w-4xl mx-auto bg-white">
           <ProfileBanner />
@@ -127,7 +124,6 @@ export default function ProfilePage() {
               <PhotoSection />
             </div>
 
-            {/* Bài viết */}
             <div className="flex-1">
               <ProfileFeed />
               <ProfilePosts newPost={newPost} />

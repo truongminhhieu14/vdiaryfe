@@ -2,59 +2,44 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { FaCheckCircle } from "react-icons/fa";
-import { getUserIdFromLocalStorage } from "@/utils/auth";
-import friendApi, { getMutualFriends } from "@/services/friend.service";
-import { IFriend } from "@/types/friend.type";
+import friendApi from "@/services/friend.service";
 import FriendActionMenu from "./FriendActionMenu";
+import { useMutualFriendsBatch } from "@/hook/useMutualFriendsBatch";
+import { getUserIdFromLocalStorage } from "@/utils/auth";
+import { IFriend } from "@/types/friend.type";
+import { toast } from "react-toastify";
 
 export default function FriendsList() {
   const [friends, setFriends] = useState<IFriend[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const [mutualFriendsData, setMutualFriendsData] = useState<{[key: string]: {count: number, mutualFriends: IFriend[]}}>({});
 
-  const userId = getUserIdFromLocalStorage();
+  const friendIds = friends.map((f) => f._id);
+  const { mutualMap } = useMutualFriendsBatch(friendIds);
 
-  const fetchMutualFriends = async (friendIds: string[]) => {
-    if (friendIds.length === 0) return;
-    
-    try {
-      const res = await getMutualFriends(friendIds);
-      console.log("Mutual friends response:", res.data);
-      
-      // Cập nhật mutual friends data
-      const newMutualData = { ...mutualFriendsData };
-      // TODO: Implement mutual friends logic based on actual API response
-      setMutualFriendsData(newMutualData);
-    } catch (err) {
-      console.error("Error fetching mutual friends:", err);
-    }
-  };
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserId(getUserIdFromLocalStorage());
+  }, []);
 
   const fetchFriends = async (pageNum: number) => {
     try {
       setLoading(true);
       const res = await friendApi.getAllFriend(pageNum, 10);
       const friendsList = res.data.data?.friends || [];
-      const hasMore = res.data.data?.pagination?.hasMore || false;
+      const more = res.data.data?.pagination?.hasMore || false;
 
       if (pageNum === 1) {
         setFriends(friendsList);
       } else {
         setFriends((prev) => [...prev, ...friendsList]);
       }
-      setHasMore(hasMore);
-
-      if (friendsList.length > 0) {
-        const friendIds = friendsList.map(friend => friend._id);
-        fetchMutualFriends(friendIds);
-      }
+      setHasMore(more);
     } catch (err: any) {
-      console.error("Error fetching friends:", err);
       setError(err.response?.data?.message || "Lỗi khi tải danh sách bạn bè");
     } finally {
       setTimeout(() => {
@@ -65,25 +50,16 @@ export default function FriendsList() {
 
   useEffect(() => {
     if (userId) fetchFriends(page);
-    console.log("page", page);
   }, [userId, page]);
 
-  const loadMore = () => {
-    if (!loading && hasMore) {
-      setPage((prev) => prev + 1);
-    }
-  };
   useEffect(() => {
     if (!loadMoreRef.current || !hasMore || loading) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setPage((prev) => prev + 1);
-        }
-      },
-      { threshold: 1 }
-    );
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setPage((prev) => prev + 1);
+      }
+    }, { threshold: 1 });
 
     observer.observe(loadMoreRef.current);
 
@@ -97,52 +73,31 @@ export default function FriendsList() {
   const handleUnFriend = async (friendId: string) => {
     try {
       await friendApi.unfriend(friendId);
-      setFriends(friends.filter((friend) => friend._id !== friendId));
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Lỗi khi hủy bạn bè");
+      setFriends((prev) => prev.filter((f) => f._id !== friendId));
+    } catch {
+      toast("Hủy kết bạn thất bại!");
     }
   };
 
   if (!userId) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 text-center">
-          <div className="text-yellow-500 text-2xl mb-2">⚠️</div>
-          <p className="text-yellow-700 font-medium">
-            Vui lòng đăng nhập để xem danh sách bạn bè.
-          </p>
-        </div>
+      <div className="col-span-full text-center text-gray-500 py-12">
+        Vui lòng đăng nhập để xem danh sách bạn bè.
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
-          <div className="text-red-500 text-2xl mb-2">⚠️</div>
-          <p className="text-red-700 font-medium">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (friends.length === 0) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="text-6xl mb-4">👥</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">No friends yet</h3>
-          <p className="text-gray-500">
-            Start connecting with people to see them here
-          </p>
-        </div>
+      <div className="col-span-full text-center text-red-500 py-12">
+        {error}
       </div>
     );
   }
 
   return (
     <>
+      {/* Loading skeleton */}
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-6">
           {[...Array(10)].map((_, index) => (
@@ -158,14 +113,20 @@ export default function FriendsList() {
           ))}
         </div>
       )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        {friends.length === 0 && !loading && (
+          <div className="col-span-full text-center text-gray-500 py-12">
+            Bạn chưa có bạn bè nào.
+          </div>
+        )}
+
         {friends.map((friend) => (
           <div
             key={friend._id}
             className="relative bg-white rounded-2xl border border-gray-200 shadow flex flex-col items-center p-6 group transition hover:shadow-lg"
           >
-            <FriendActionMenu friend={friend} onUnFriend={handleUnFriend} />
-            <div className="w-full h-24 relative mb-4 rounded-t-xl overflow-hidden">
+            <div className="w-full h-24 relative mb-4 rounded-t-2xl overflow-hidden">
               <Image
                 src={friend.background || "/assets/img/bg1.jpg"}
                 alt="background"
@@ -174,7 +135,13 @@ export default function FriendsList() {
               />
             </div>
 
-            <div className="relative -mt-12 mb-2">
+            <FriendActionMenu
+              friend={friend}
+              type="friend"
+              onUnFriend={handleUnFriend}
+            />
+
+            <div className="relative mb-2 -mt-12">
               <Image
                 src={friend.avatar || "/assets/img/trainers/hieu.jpg"}
                 alt={friend.name}
@@ -184,35 +151,33 @@ export default function FriendsList() {
               />
             </div>
 
-            <div className="font-semibold text-gray-900 flex items-center gap-1">
+            <div className="font-bold text-base text-gray-900 flex items-center gap-1 mb-1">
               {friend.name}
-              {friend.verified && (
-                <FaCheckCircle
-                  className="text-blue-500 text-sm ml-1"
-                  title="Verified"
-                />
-              )}
+              {friend.verified && <span className="text-blue-500">✔️</span>}
             </div>
 
             <div className="flex items-center gap-1 mt-1 mb-2">
-              {(mutualFriendsData[friend._id]?.mutualFriends || []).slice(0, 2).map((mf, idx) => (
-                <Image
-                  key={idx}
-                  src={mf.avatar}
-                  alt={mf.name}
-                  width={20}
-                  height={20}
-                  className="rounded-full border-2 border-white -ml-2 first:ml-0 bg-white"
-                />
-              ))}
+              {(mutualMap[friend._id]?.mutualFriends || [])
+                .slice(0, 2)
+                .map((mf, idx) => (
+                  <Image
+                    key={idx}
+                    src={mf.avatar || "/assets/img/trainers/hieu.jpg"}
+                    alt={mf.name}
+                    width={20}
+                    height={20}
+                    className="rounded-full border-2 border-white -ml-2 first:ml-0 bg-white"
+                  />
+                ))}
               <span className="text-xs text-gray-500 ml-2">
-                {mutualFriendsData[friend._id]?.count || 0} mutual friends
+                {mutualMap[friend._id]?.count || 0} mutual friends
               </span>
             </div>
           </div>
         ))}
       </div>
-      {hasMore && <div ref={loadMoreRef} className="h-10" />}
+
+      {hasMore && <div ref={loadMoreRef} className="h-10 col-span-full" />}
     </>
   );
 }

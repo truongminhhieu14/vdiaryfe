@@ -1,6 +1,6 @@
 import { IComment } from "@/types/comment.type";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useSelector } from "react-redux";
@@ -8,18 +8,36 @@ import { RootState } from "@/store/store";
 import { getSocket } from "@/utils/socket";
 import commentApi from "@/services/comment.service";
 import { IoMdSend } from "react-icons/io";
+import { BsThreeDots } from "react-icons/bs";
+import { toast } from "react-toastify";
 
 type Props = {
   className?: string;
   comment: IComment;
+  onDelete?: (commentId: string) => void;
 };
 
-export default function Comment({ className, comment }: Props) {
+export default function Comment({ className, comment, onDelete }: Props) {
   const [showReplies, setShowReplies] = useState(false);
   const [replies, setReplies] = useState<IComment[]>([]);
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const user = useSelector((state: RootState) => state.auth.user);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      setMenuOpen(false);
+    }
+  };
+
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
 
   useEffect(() => {
     const fetchReplies = async () => {
@@ -68,10 +86,23 @@ export default function Comment({ className, comment }: Props) {
       setCommentText("");
     }
   };
+
+  const handleDeleteComment = async () => {
+    try {
+      const res = await commentApi.deleteComments(comment._id)
+      toast.success(res.message || "Delete comment sucessfully")
+      if (onDelete) {
+      onDelete(comment._id);
+    }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Delete comment failed")
+      
+    }
+  }
   return (
-    <div className={`${className} flex flex-col gap-2`}>
+    <div className={`${className} flex flex-col gap-2 group`}>
       {/* Parent comment */}
-      <div className="flex items-start">
+      <div className=" flex items-start">
         <Image
           src={comment.author.avatar || "/assets/img/user.png"}
           alt="avt"
@@ -79,7 +110,8 @@ export default function Comment({ className, comment }: Props) {
           height={40}
           className="object-cover w-10 h-10 mr-4 rounded-full"
         />
-        <div className="text-sm flex-1">
+        <div className="bg-gray-100 rounded-2xl p-2 text-sm flex-1">
+          
           <p className="font-semibold mr-2">{comment.author.name}</p>
           <p>{comment.text}</p>
           <p className="text-xs text-slate-400 my-1">
@@ -115,6 +147,31 @@ export default function Comment({ className, comment }: Props) {
             </button>
           </div>
         </div>
+    
+      <div className="relative ml-2 mt-10 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuRef}>
+      <button
+        onClick={() => setMenuOpen(!menuOpen)}
+        className="p-1 hover:bg-gray-200 rounded-full"
+      >
+        <BsThreeDots size={16} />
+      </button>
+        {menuOpen && (
+          <div className="absolute right-0 mt-1 w-40 bg-white border rounded-xl shadow-lg z-10">
+            <button
+            onClick={handleDeleteComment}
+              className="w-full px-3 py-2 text-left hover:bg-gray-100"
+            >
+              Xóa bình luận
+            </button>
+            <button
+              className="w-full px-3 py-2 text-left  hover:bg-gray-100"
+            >
+              Ẩn bình luận
+            </button>
+
+          </div>
+        )}
+      </div>
       </div>
       {/* Child comments */}
       {showReplies && (

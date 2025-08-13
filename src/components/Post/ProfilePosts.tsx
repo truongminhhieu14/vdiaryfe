@@ -410,6 +410,9 @@ const ProfilePosts = ({ newPost }: ProfilePostsProps) => {
   useEffect(() => {
     setUserId(getUserIdFromLocalStorage());
   }, []);
+  const handleDeletedPost = (postId: string) => {
+    dispatch(setPosts(posts.filter(post => post._id !== postId)));
+  };
 
   const fetchPosts = async (pageNum: number) => {
     try {
@@ -469,7 +472,7 @@ const ProfilePosts = ({ newPost }: ProfilePostsProps) => {
     <>
       <div className="space-y-4">
         {posts.map((post, index) => (
-          <PostItem key={`${post._id}-${index}`} post={post} />
+          <PostItem key={`${post._id}-${index}`} post={post} onDeleted={handleDeletedPost}/>
         ))}
       </div>
       {hasMore && <div ref={loadMoreRef} className="h-10" />}

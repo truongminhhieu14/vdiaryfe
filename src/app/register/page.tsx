@@ -1,49 +1,59 @@
 "use client";
 
-import React, { ChangeEvent, FormEvent, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { IRegister } from "@/types/auth.type";
 import authApi from "@/services/auth.service";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup"
+import { isUnprocessableEntity } from "@/utils/checkAxiosError";
+import { ErrorResponse } from "@/types/response";
+import { validateSignUp } from "../../validations/auth.validation"
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [data, setData] = useState<IRegister>({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
 
   const router = useRouter();
 
-  const handleOnChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setData((prev) => ({ ...prev, [name]: value }));
-  };
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<IRegister>({
+    resolver: yupResolver(validateSignUp), mode: 'onChange'
+  });
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-
-    if (data.password !== data.confirmPassword) {
-      toast.error("Please check password and confirm password");
-      return;
-    }
-
+  const onSubmit = async (data: IRegister) => {
     try {
-      const res = await authApi.signUp(data);
-      if (res.data.success) {
-        toast.success(res.data.message || "Đăng ký thành công!");
+      const res = await authApi.signUp({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+      });
+
+        toast.success(res.data.message);
         router.push("/login");
+    } catch (error: unknown) {
+      if (isUnprocessableEntity<ErrorResponse>(error)) {
+      const formError = error.response?.data;
+      if (formError?.errors) {
+        Object.keys(formError.errors).forEach((key) => {
+          const message = (formError.errors![key] as any).msg;
+          setError(key as keyof IRegister, { message });
+        });
       } else {
-        toast.error(res.data.message || "Đăng ký thất bại!");
+        toast.error(formError?.message);
       }
-    } catch (error: any) {
-      console.error("Register error:", error);
-      toast.error(error?.response?.data?.message || "Lỗi đăng ký.");
+    } else {
+      toast.error("Register error");
+    }
     }
   };
 
@@ -55,49 +65,47 @@ const Register = () => {
             <img src="/assets/img/signin.gif" alt="login icon" />
           </div>
 
-          <form className="pt-6 flex flex-col gap-2" onSubmit={handleSubmit}>
-            {/* Name */}
+          <form
+            className="pt-6 flex flex-col gap-2"
+            onSubmit={handleSubmit(onSubmit)}
+          >
+
             <div className="grid">
               <label>Name:</label>
               <div className="bg-slate-100 p-2">
                 <input
                   type="text"
-                  name="name"
-                  value={data.name}
-                  onChange={handleOnChange}
-                  required
+                  {...register("name")}
                   className="w-full outline-none bg-transparent"
                   placeholder="Enter your name"
                 />
               </div>
+              {errors.name && (
+                <p className="text-red-500 text-sm">{errors.name.message}</p>
+              )}
             </div>
 
-            {/* Email */}
             <div className="grid">
               <label>Email:</label>
               <div className="bg-slate-100 p-2">
                 <input
                   type="email"
-                  name="email"
-                  value={data.email}
-                  onChange={handleOnChange}
-                  required
+                  {...register("email")}
                   className="w-full outline-none bg-transparent"
                   placeholder="Enter your email"
                 />
               </div>
+              {errors.email && (
+                <p className="text-red-500 text-sm">{errors.email.message}</p>
+              )}
             </div>
 
-            {/* Password */}
             <div className="grid">
               <label>Password:</label>
               <div className="bg-slate-100 p-2 flex items-center">
                 <input
                   type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={data.password}
-                  onChange={handleOnChange}
-                  required
+                  {...register("password")}
                   className="w-full outline-none bg-transparent"
                   placeholder="Enter password"
                 />
@@ -108,18 +116,17 @@ const Register = () => {
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </div>
               </div>
+              {errors.password && (
+                <p className="text-red-500 text-sm">{errors.password.message}</p>
+              )}
             </div>
 
-            {/* Confirm Password */}
             <div className="grid">
               <label>Confirm Password:</label>
               <div className="bg-slate-100 p-2 flex items-center">
                 <input
                   type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={data.confirmPassword}
-                  onChange={handleOnChange}
-                  required
+                  {...register("confirmPassword")}
                   className="w-full outline-none bg-transparent"
                   placeholder="Enter confirm password"
                 />
@@ -132,14 +139,19 @@ const Register = () => {
                   {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                 </div>
               </div>
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-sm">
+                  {errors.confirmPassword.message}
+                </p>
+              )}
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
-              className="bg-slate-950 hover:bg-slate-800 text-white px-6 py-2 w-full max-w-[150px] rounded-full hover:scale-110 transition-all mx-auto block mt-6"
+              disabled={isSubmitting}
+              className="bg-slate-950 hover:bg-slate-800 text-white px-6 py-2 w-full max-w-[150px] rounded-full hover:scale-110 transition-all mx-auto block mt-6 disabled:opacity-50"
             >
-              Register
+              {isSubmitting ? "Registering..." : "Register"}
             </button>
           </form>
 

@@ -4,32 +4,28 @@ import { AppContext } from "@/context/app.context";
 import authApi from "@/services/auth.service";
 import { setUser as setReduxUser } from "@/store/authSlice";
 import { setAccessTokenToLocalStorage, setRefreshTokenToLocalStorage, setUserIdToLocalStorage } from "@/utils/auth";
+import { yupResolver } from "@hookform/resolvers/yup";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { ChangeEvent, FormEvent, useContext, useState } from "react";
+import React, { useContext, useState } from "react";
+import { useForm } from "react-hook-form";
+import { validateSignIn } from "@/validations/auth.validation";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
-
-interface LoginData {
-  email: string;
-  password: string;
-}
+import { ILogin } from "@/types/auth.type";
 
 const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [data, setData] = useState<LoginData>({ email: "", password: "" });
   const { setIsAuthenticated, setUser } = useContext(AppContext)
   const router = useRouter();
   const dispatch = useDispatch();
 
-  const handleOnChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setData((prev) => ({ ...prev, [name]: value }));
-  };
+  const { register, handleSubmit, formState: {errors, isSubmitting}} = useForm<ILogin>({
+    resolver: yupResolver(validateSignIn), mode: "onChange"
+  })
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: ILogin) => {
     try {
       const res = await authApi.signIn(data);
       const dataApi = res.data;
@@ -62,19 +58,21 @@ const Login: React.FC = () => {
             <img src="/assets/img/signin.gif" alt="login icon" />
           </div>
 
-          <form className="pt-6 flex flex-col gap-2" onSubmit={handleSubmit}>
+          <form className="pt-6 flex flex-col gap-2" onSubmit={handleSubmit(onSubmit)}>
             <div className="grid">
               <label>Email</label>
               <div className="bg-slate-200 p-2">
                 <input
                   type="email"
+                  {...register("email")}
                   name="email"
-                  value={data.email}
-                  onChange={handleOnChange}
                   placeholder="Nhập email"
                   className="w-full h-full outline-none bg-transparent"
                 />
               </div>
+              {errors.email && (
+                <p className="text-red-500 text-sm">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="grid">
@@ -82,9 +80,8 @@ const Login: React.FC = () => {
               <div className="bg-slate-200 p-2 flex">
                 <input
                   type={showPassword ? "text" : "password"}
+                  {...register("password")}
                   name="password"
-                  value={data.password}
-                  onChange={handleOnChange}
                   placeholder="Nhập password"
                   className="w-full h-full outline-none bg-transparent"
                 />
@@ -95,6 +92,9 @@ const Login: React.FC = () => {
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </div>
               </div>
+              {errors.password && (
+                <p className="text-red-500 text-sm">{errors.password.message}</p>
+              )}
               <Link
                 href={"/forgot-password"}
                 className="block w-fit ml-auto hover:underline hover:text-red-600"
@@ -103,7 +103,11 @@ const Login: React.FC = () => {
               </Link>
             </div>
 
-            <button className="bg-black hover:bg-slate-700 text-white px-6 py-2 w-full max-w-[150px] rounded-full hover:scale-110 transition-all mx-auto block mt-6">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-black hover:bg-slate-700 text-white px-6 py-2 w-full max-w-[150px] rounded-full hover:scale-110 transition-all mx-auto block mt-6"
+            >
               Login
             </button>
           </form>

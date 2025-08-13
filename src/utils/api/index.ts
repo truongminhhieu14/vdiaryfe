@@ -5,7 +5,7 @@ import http from "../../services/api.service"
 
 export const getNewAccessToken = async () => {
   const response = await http
-    .post<SuccessResponse<IRefreshToken>>("/auths/getNewAccessToken", {
+    .post<SuccessResponse<IRefreshToken>>("/auth/getNewAccessToken", {
       refreshToken: getRefreshTokenFormLocalStorage(),
     }, {
       headers: {

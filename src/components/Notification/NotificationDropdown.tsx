@@ -4,42 +4,68 @@ import { cn } from "@/lib/utils";
 import notificationApi from "@/services/notification.service";
 import { INotification } from "@/types/notification.type";
 import { AppContext } from "@/context/app.context";
+import { useInfiniteScroll } from "@/hook/useInfiniteScroll";
+import NotificationItem from "./NotificationItem";
+
+function isToday(dateString: string) {
+  const date = new Date(dateString);
+  const today = new Date();
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+}
 
 export default function NotificationDropdown() {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const notificationRef = useRef<HTMLDivElement>(null);
 
   const { socket, user } = useContext(AppContext);
 
-
   const unreadCount = notifications.filter((n) => !n.isRead).length;
   const filtered =
-    filter === "all"
-      ? notifications
-      : notifications.filter((n) => !n.isRead);
+    filter === "all" ? notifications : notifications.filter((n) => !n.isRead);
+
+  const todayNotifications = filtered.filter((n) => isToday(n.createdAt));
+  const previousNotifications = filtered.filter((n) => !isToday(n.createdAt));
+
+  const fetchNotifications = async (pageNum: number) => {
+    try {
+      setLoading(true);
+      const res = await notificationApi.getNotifications(pageNum, 10);
+      const newData = res.data?.data.notifications || [];
+      const more = res.data?.data?.pagination?.hasMore || false;
+
+      if (pageNum === 1) {
+        setNotifications(newData);
+      } else {
+        setNotifications((prev) => [...prev, ...newData]);
+      }
+      setHasMore(more);
+    } catch (error) {
+      console.error("Failed to fetch notifications", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        setLoading(true);
-        const res = await notificationApi.getNotifications();
-        setNotifications(res.data?.data.notifications || []);
-      } catch (error) {
-        console.error("Failed to fetch notifications", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchNotifications();
-  }, []);
+    if (open && user) {
+      setPage(1);
+      fetchNotifications(1);
+    }
+  }, [open, user]);
+
   useEffect(() => {
     if (!socket || !user) return;
 
     const handleNewNotification = (notification: INotification) => {
-        console.log("🔥 Received new notification", notification);
       setNotifications((prev) => [notification, ...prev]);
     };
 
@@ -64,6 +90,18 @@ export default function NotificationDropdown() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  const loadMoreRef = useInfiniteScroll({
+    hasMore,
+    loading,
+    onLoadMore: () => setPage((prev) => prev + 1),
+  });
+
+  useEffect(() => {
+    if (page > 1 && open) {
+      fetchNotifications(page);
+    }
+  }, [page, open]);
 
   return (
     <div className="relative inline-block text-left" ref={notificationRef}>
@@ -104,39 +142,50 @@ export default function NotificationDropdown() {
           </div>
           <ul className="max-h-[400px] overflow-y-auto">
             {loading ? (
-              <li className="text-center text-sm text-gray-500 py-6">
-                Đang tải...
-              </li>
+              <div className="grid grid-cols-1 gap-3 p-3">
+                {[...Array(3)].map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex gap-3 items-center animate-pulse"
+                  >
+                    <div className="w-10 h-10 bg-gray-300 rounded-full" />
+                    <div className="flex-1">
+                      <div className="h-3 bg-gray-300 rounded w-1/2 mb-2" />
+                      <div className="h-2 bg-gray-200 rounded w-1/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : filtered.length === 0 ? (
               <li className="text-center text-sm text-gray-500 py-6">
                 Không có thông báo nào
               </li>
             ) : (
-              filtered.map((n) => (
-                <li
-                  key={n._id}
-                  className="flex gap-3 items-start p-3 hover:bg-gray-50"
-                >
-                  <img
-                    src={n.senderId.avatar || "/default-avatar.png"}
-                    alt="avatar"
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div className="flex-1 text-sm">
-                    <span className="font-medium">
-                      {n.senderId.name || "Người dùng"}
-                    </span>{" "}
-                    {n.type === "comment"
-                      ? "đã bình luận bài viết của bạn."
-                      : "đã thích bài viết của bạn."}
-                    <div className="text-xs text-gray-500">
-                      {new Date(n.createdAt).toLocaleString("vi-VN")}
-                    </div>
-                  </div>
-                  {!n.isRead && <Dot className="text-blue-500" />}
-                </li>
-              ))
+              <>
+                {todayNotifications.length > 0 && (
+                  <>
+                    <li className="px-3 py-1 font-semibold text-gray-700 bg-gray-100 sticky top-0">
+                      Hôm nay
+                    </li>
+                    {todayNotifications.map((n) => (
+                      <NotificationItem key={n._id} notification={n} />
+                    ))}
+                  </>
+                )}
+
+                {previousNotifications.length > 0 && (
+                  <>
+                    <li className="px-3 py-1 font-semibold text-gray-700 bg-gray-100 sticky top-0 mt-2">
+                      Trước đó
+                    </li>
+                    {previousNotifications.map((n) => (
+                      <NotificationItem key={n._id} notification={n} />
+                    ))}
+                  </>
+                )}
+              </>
             )}
+            {hasMore && <div ref={loadMoreRef} className="h-10" />}
           </ul>
         </div>
       )}

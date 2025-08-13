@@ -82,6 +82,7 @@ export default function CommentList({ postId }: Props) {
                 key={comment._id}
                 className="flex items-start space-x-2"
                 comment={comment}
+                onDelete={(id) => setComments(prev => prev.filter(item => item._id !== id))}
               />
             ))}
           </div>

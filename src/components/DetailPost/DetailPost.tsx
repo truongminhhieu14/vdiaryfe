@@ -168,6 +168,9 @@ export default function DetailPost({
                 <video
                   src={post.videos[0]}
                   controls
+                  autoPlay
+                  muted
+                  playsInline
                   className="w-full max-h-[500px] rounded-lg"
                 />
               )}
